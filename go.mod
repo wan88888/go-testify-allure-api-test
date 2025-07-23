@@ -4,8 +4,6 @@ go 1.21
 
 require (
 	github.com/go-resty/resty/v2 v2.10.0
-	github.com/ozontech/allure-go/pkg/allure v0.6.1
-	github.com/ozontech/allure-go/pkg/framework v0.6.12
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 )
@@ -13,12 +11,10 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect

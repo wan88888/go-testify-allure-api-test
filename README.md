@@ -1,13 +1,13 @@
-# Go + Testify + Allure API 自动化测试框架
+# Go + Testify API 自动化测试框架
 
-基于 Golang、Testify 和 Allure 构建的接口自动化测试框架，使用 Platzi Fake Store API 作为测试数据源。
+基于 Golang 和 Testify 构建的接口自动化测试框架，使用 Platzi Fake Store API 作为测试数据源。
 
 ## 🚀 项目特性
 
-- **现代化技术栈**: 使用 Go 1.21+ 、Testify 测试框架和 Allure 报告
+- **现代化技术栈**: 使用 Go 1.21+ 和 Testify 测试框架
 - **完整的 API 覆盖**: 涵盖商品、分类、用户、购物车等所有 API 端点
 - **丰富的测试场景**: 包括正常流程、异常处理、数据验证、性能测试等
-- **详细的测试报告**: 集成 Allure 生成美观的测试报告
+- **详细的测试日志**: 完整的请求响应日志记录
 - **灵活的配置管理**: 支持 YAML 配置文件，易于环境切换
 - **模块化设计**: 清晰的项目结构，易于维护和扩展
 - **并发测试支持**: 支持并行执行测试用例，提高执行效率
@@ -39,7 +39,6 @@ go-testify-allure-api-test/
 ## 🛠️ 环境要求
 
 - **Go**: 1.21 或更高版本
-- **Allure**: 2.13+ (用于生成测试报告)
 - **网络**: 能够访问 https://fakestoreapi.com
 
 ## 📦 安装和设置
@@ -61,19 +60,7 @@ make deps
 go mod tidy
 ```
 
-### 3. 安装 Allure (可选)
 
-```bash
-# 使用 Makefile 自动安装
-make install
-
-# 或者手动安装
-# macOS (使用 Homebrew)
-brew install allure
-
-# 使用 npm
-npm install -g allure-commandline
-```
 
 ## 🚀 快速开始
 
@@ -83,11 +70,11 @@ npm install -g allure-commandline
 # 运行所有测试
 make test
 
-# 运行测试并生成报告
-make test-and-report
+# 运行测试（详细输出）
+make test-verbose
 
-# 完整流程：测试 + 报告 + 启动服务器
-make full
+# 并行运行测试（更快）
+make test-parallel
 ```
 
 ### 运行特定测试套件
@@ -106,15 +93,7 @@ make test-users
 make test-carts
 ```
 
-### 生成和查看报告
 
-```bash
-# 生成 Allure 报告
-make report
-
-# 启动报告服务器
-make serve
-```
 
 ## 📊 测试覆盖范围
 
@@ -157,10 +136,6 @@ api:
   timeout: 30                           # 请求超时时间（秒）
   retry_count: 3                        # 重试次数
 
-allure:
-  results_dir: "allure-results"         # Allure 结果目录
-  report_dir: "allure-report"           # Allure 报告目录
-
 test:
   parallel: true                        # 是否并行执行测试
   verbose: true                         # 是否显示详细输出
@@ -172,16 +147,15 @@ logging:
   output: "console"                     # 日志输出
 ```
 
-## 📈 测试报告
+## 📈 测试输出
 
-框架集成了 Allure 测试报告，提供以下功能：
+框架提供详细的测试日志输出：
 
 - **测试概览**: 测试执行统计、成功率、耗时等
-- **测试详情**: 每个测试用例的详细执行步骤
 - **请求/响应**: 完整的 HTTP 请求和响应信息
 - **错误分析**: 失败用例的详细错误信息
-- **趋势分析**: 历史测试结果对比
-- **分类统计**: 按功能模块分类的测试结果
+- **性能数据**: 响应时间和性能指标
+- **数据验证**: 详细的断言和验证结果
 
 ## 🧪 测试用例设计
 

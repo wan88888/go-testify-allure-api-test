@@ -14,11 +14,6 @@ type Config struct {
 		RetryCount int    `mapstructure:"retry_count"`
 	} `mapstructure:"api"`
 
-	Allure struct {
-		ResultsDir string `mapstructure:"results_dir"`
-		ReportDir  string `mapstructure:"report_dir"`
-	} `mapstructure:"allure"`
-
 	Test struct {
 		Parallel bool `mapstructure:"parallel"`
 		Verbose  bool `mapstructure:"verbose"`
