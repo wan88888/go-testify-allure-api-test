@@ -1,0 +1,18 @@
+api:
+  base_url: "https://fakestoreapi.com"
+  timeout: 30
+  retry_count: 3
+
+allure:
+  results_dir: "allure-results"
+  report_dir: "allure-report"
+
+test:
+  parallel: true
+  verbose: true
+  cleanup: true
+
+logging:
+  level: "info"
+  format: "json"
+  output: "console"
