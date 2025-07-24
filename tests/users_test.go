@@ -9,88 +9,92 @@ import (
 	"go-testify-allure-api-test/models"
 	"go-testify-allure-api-test/utils"
 
+	"github.com/go-resty/resty/v2"
+	"github.com/ozontech/allure-go/pkg/allure"
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestGetAllUsers 测试获取所有用户
 func TestGetAllUsers(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Get all users", func(t provider.T) {
+		t.Tags("api", "users", "get")
+		t.Description("This test verifies that we can retrieve all users and validate their structure")
+		t.Severity(allure.NORMAL)
 
-	testHelper.LogRequest("GET", "/users", nil)
+		apiClient := client.NewAPIClient()
 
-	users, resp, err := apiClient.GetAllUsers()
+		var users []models.User
+		var resp *resty.Response
+		var err error
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
+		t.WithNewStep("Send GET request to /users", func(sCtx provider.StepCtx) {
+			users, resp, err = apiClient.GetAllUsers()
+		})
 
-	// 验证响应状态码
-	testHelper.AssertStatusCode(resp, 200, "获取用户列表应该返回200状态码")
+		t.Require().NoError(err, "请求不应该返回错误")
+		t.Require().Equal(200, resp.StatusCode(), "获取用户列表应该返回200状态码")
+		t.Require().True(resp.Time() < 5*time.Second, "响应时间应该在5秒内")
 
-	// 验证响应时间
-	testHelper.AssertResponseTime(resp, 5*time.Second, "响应时间应该在5秒内")
+		t.WithNewStep("Validate response", func(sCtx provider.StepCtx) {
+			t.Require().NotEmpty(users, "用户列表不应该为空")
+			t.Assert().Greater(len(users), 0, "应该返回至少一个用户")
+		})
 
-	// 验证返回的用户数量
-	testHelper.AssertNotEmpty(users, "用户列表不应该为空")
-	assert.Greater(t, len(users), 0, "应该返回至少一个用户")
-
-	// 验证用户数据结构
-	if len(users) > 0 {
-		user := users[0]
-		t.Logf("验证用户数据结构 - ID: %d, 用户名: %s, 邮箱: %s", user.ID, user.Username, user.Email)
-
-		assert.Greater(t, user.ID, 0, "用户ID应该大于0")
-		assert.NotEmpty(t, user.Username, "用户名不应该为空")
-		assert.NotEmpty(t, user.Email, "邮箱不应该为空")
-		assert.NotEmpty(t, user.Name.Firstname, "名字不应该为空")
-		assert.NotEmpty(t, user.Name.Lastname, "姓氏不应该为空")
-		assert.NotEmpty(t, user.Phone, "电话不应该为空")
-		assert.NotEmpty(t, user.Address.City, "城市不应该为空")
-		assert.NotEmpty(t, user.Address.Street, "街道不应该为空")
-	}
-
-	t.Logf("用户总数: %d", len(users))
+		t.WithNewStep("Validate users data", func(sCtx provider.StepCtx) {
+			if len(users) > 0 {
+				user := users[0]
+				t.Assert().Greater(user.ID, 0, "用户ID应该大于0")
+				t.Assert().NotEmpty(user.Username, "用户名不应该为空")
+				t.Assert().NotEmpty(user.Email, "邮箱不应该为空")
+				t.Assert().NotEmpty(user.Name.Firstname, "名字不应该为空")
+				t.Assert().NotEmpty(user.Name.Lastname, "姓氏不应该为空")
+				t.Assert().NotEmpty(user.Phone, "电话不应该为空")
+				t.Assert().NotEmpty(user.Address.City, "城市不应该为空")
+				t.Assert().NotEmpty(user.Address.Street, "街道不应该为空")
+			}
+		})
+	})
 }
 
 // TestGetUserByID 测试根据ID获取用户
 func TestGetUserByID(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Get user by ID", func(t provider.T) {
+		t.Tags("api", "users", "get", "single")
+		t.Description("This test verifies that we can retrieve a specific user by ID")
+		t.Severity(allure.NORMAL)
 
-	userID := 1
-	t.Logf("获取用户ID为%d的用户", userID)
+		apiClient := client.NewAPIClient()
+		userID := 1
 
-	testHelper.LogRequest("GET", "/users/1", nil)
+		var user *models.User
+		var resp *resty.Response
+		var err error
 
-	user, resp, err := apiClient.GetUserByID(userID)
+		t.WithNewStep("Send GET request to /users/1", func(sCtx provider.StepCtx) {
+			user, resp, err = apiClient.GetUserByID(userID)
+		})
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
+		t.Require().NoError(err, "请求不应该返回错误")
+		t.Require().Equal(200, resp.StatusCode(), "获取单个用户应该返回200状态码")
+		t.Require().True(resp.Time() < 3*time.Second, "响应时间应该在3秒内")
 
-	// 验证响应状态码
-	testHelper.AssertStatusCode(resp, 200, "获取单个用户应该返回200状态码")
-
-	// 验证响应时间
-	testHelper.AssertResponseTime(resp, 3*time.Second, "响应时间应该在3秒内")
-
-	// 验证用户数据
-	assert.Equal(t, userID, user.ID, "返回的用户ID应该匹配请求的ID")
-	assert.NotEmpty(t, user.Username, "用户名不应该为空")
-	assert.NotEmpty(t, user.Email, "邮箱不应该为空")
-	assert.NotEmpty(t, user.Name.Firstname, "名字不应该为空")
-	assert.NotEmpty(t, user.Name.Lastname, "姓氏不应该为空")
-	assert.NotEmpty(t, user.Phone, "电话不应该为空")
-	assert.NotEmpty(t, user.Address.City, "城市不应该为空")
-	assert.NotEmpty(t, user.Address.Street, "街道不应该为空")
-	assert.NotEmpty(t, user.Address.Zipcode, "邮编不应该为空")
-
-	// 验证地理位置信息
-	assert.NotEmpty(t, user.Address.Geolocation.Lat, "纬度不应该为空")
-	assert.NotEmpty(t, user.Address.Geolocation.Long, "经度不应该为空")
-
-	t.Logf("用户详情 - 用户名: %s, 邮箱: %s, 姓名: %s %s, 城市: %s", 
-		user.Username, user.Email, user.Name.Firstname, user.Name.Lastname, user.Address.City)
+		t.WithNewStep("Validate user data", func(sCtx provider.StepCtx) {
+			t.Assert().Equal(userID, user.ID, "返回的用户ID应该匹配请求的ID")
+			t.Assert().NotEmpty(user.Username, "用户名不应该为空")
+			t.Assert().NotEmpty(user.Email, "邮箱不应该为空")
+			t.Assert().NotEmpty(user.Name.Firstname, "名字不应该为空")
+			t.Assert().NotEmpty(user.Name.Lastname, "姓氏不应该为空")
+			t.Assert().NotEmpty(user.Phone, "电话不应该为空")
+			t.Assert().NotEmpty(user.Address.City, "城市不应该为空")
+			t.Assert().NotEmpty(user.Address.Street, "街道不应该为空")
+			t.Assert().NotEmpty(user.Address.Zipcode, "邮编不应该为空")
+			t.Assert().NotEmpty(user.Address.Geolocation.Lat, "纬度不应该为空")
+			t.Assert().NotEmpty(user.Address.Geolocation.Long, "经度不应该为空")
+		})
+	})
 }
 
 // TestGetUserByInvalidID 测试获取不存在的用户

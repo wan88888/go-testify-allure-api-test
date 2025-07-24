@@ -8,45 +8,54 @@ import (
 	"go-testify-allure-api-test/models"
 	"go-testify-allure-api-test/utils"
 
+	"github.com/ozontech/allure-go/pkg/allure"
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestGetAllProducts 测试获取所有商品
 func TestGetAllProducts(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Get all products", func(t provider.T) {
+		t.Title("Test getting all products from API")
+		t.Description("This test verifies that we can retrieve all products and validate their structure")
+		t.Tags("api", "products", "get")
+		t.Severity(allure.NORMAL)
 
-	testHelper.LogRequest("GET", "/products", nil)
+		apiClient := client.NewAPIClient()
 
-	products, resp, err := apiClient.GetAllProducts()
+		t.WithNewStep("Send GET request to /products", func(sCtx provider.StepCtx) {
+			sCtx.Logf("发送 GET 请求 - URL: /products")
+		})
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
+		products, resp, err := apiClient.GetAllProducts()
 
-	// 验证响应状态码
-	testHelper.AssertStatusCode(resp, 200, "获取商品列表应该返回200状态码")
+		t.WithNewStep("Validate response", func(sCtx provider.StepCtx) {
+			sCtx.Logf("响应信息 - 状态码: %d, 响应时间: %s", resp.StatusCode(), resp.Time().String())
+			t.Require().NoError(err, "请求不应该返回错误")
+			t.Require().Equal(200, resp.StatusCode(), "获取商品列表应该返回200状态码")
+			t.Require().True(resp.Time() <= 5*time.Second, "响应时间应该在5秒内")
+		})
 
-	// 验证响应时间
-	testHelper.AssertResponseTime(resp, 5*time.Second, "响应时间应该在5秒内")
+		t.WithNewStep("Validate products data", func(sCtx provider.StepCtx) {
+			t.Require().NotEmpty(products, "商品列表不应该为空")
+			t.Assert().Greater(len(products), 0, "应该返回至少一个商品")
 
-	// 验证返回的商品数量
-	testHelper.AssertNotEmpty(products, "商品列表不应该为空")
-	assert.Greater(t, len(products), 0, "应该返回至少一个商品")
+			if len(products) > 0 {
+				product := products[0]
+				sCtx.Logf("验证商品数据结构 - ID: %d, 标题: %s, 价格: %.2f", product.ID, product.Title, product.Price)
 
-	// 验证商品数据结构
-	if len(products) > 0 {
-		product := products[0]
-		t.Logf("验证商品数据结构 - ID: %d, 标题: %s, 价格: %.2f", product.ID, product.Title, product.Price)
+				t.Assert().Greater(product.ID, 0, "商品ID应该大于0")
+				t.Assert().NotEmpty(product.Title, "商品标题不应该为空")
+				t.Assert().Greater(product.Price, 0.0, "商品价格应该大于0")
+				t.Assert().NotEmpty(product.Category, "商品分类不应该为空")
+				t.Assert().NotEmpty(product.Image, "商品图片URL不应该为空")
+			}
 
-		assert.Greater(t, product.ID, 0, "商品ID应该大于0")
-		assert.NotEmpty(t, product.Title, "商品标题不应该为空")
-		assert.Greater(t, product.Price, 0.0, "商品价格应该大于0")
-		assert.NotEmpty(t, product.Category, "商品分类不应该为空")
-		assert.NotEmpty(t, product.Image, "商品图片URL不应该为空")
-	}
-
-	t.Logf("商品总数: %d", len(products))
+			sCtx.Logf("商品总数: %d", len(products))
+		})
+	})
 }
 
 // TestGetProductByID 测试根据ID获取商品

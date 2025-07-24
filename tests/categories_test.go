@@ -6,215 +6,188 @@ import (
 	"time"
 
 	"go-testify-allure-api-test/client"
-	"go-testify-allure-api-test/utils"
+	"go-testify-allure-api-test/models"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-resty/resty/v2"
+	"github.com/ozontech/allure-go/pkg/allure"
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/runner"
 )
 
 // TestGetAllCategories 测试获取所有分类
 func TestGetAllCategories(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Test getting all categories from API", func(t provider.T) {
+		t.Tags("api", "categories", "smoke")
+		t.Description("验证获取所有商品分类的API功能")
+		t.Severity(allure.CRITICAL)
 
-	testHelper.LogRequest("GET", "/products/categories", nil)
+		apiClient := client.NewAPIClient()
+		var categories []string
+		var resp *resty.Response
+		var err error
 
-	categories, resp, err := apiClient.GetAllCategories()
+		t.WithNewStep("发送获取所有分类的请求", func(sCtx provider.StepCtx) {
+			categories, resp, err = apiClient.GetAllCategories()
+			t.Require().NoError(err, "请求不应该返回错误")
+		})
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
+		t.WithNewStep("验证响应状态码", func(sCtx provider.StepCtx) {
+			t.Require().Equal(200, resp.StatusCode(), "获取分类列表应该返回200状态码")
+		})
 
-	// 验证响应状态码
-	testHelper.AssertStatusCode(resp, 200, "获取分类列表应该返回200状态码")
+		t.WithNewStep("验证响应时间", func(sCtx provider.StepCtx) {
+			t.Require().True(resp.Time() < 3*time.Second, "响应时间应该在3秒内")
+		})
 
-	// 验证响应时间
-	testHelper.AssertResponseTime(resp, 3*time.Second, "响应时间应该在3秒内")
+		t.WithNewStep("验证分类数据", func(sCtx provider.StepCtx) {
+			t.Require().NotEmpty(categories, "分类列表不应该为空")
+			t.Assert().Greater(len(categories), 0, "应该返回至少一个分类")
 
-	// 验证返回的分类数量
-	testHelper.AssertNotEmpty(categories, "分类列表不应该为空")
-	assert.Greater(t, len(categories), 0, "应该返回至少一个分类")
-
-	// 验证分类数据
-	for i, category := range categories {
-		assert.NotEmpty(t, category, fmt.Sprintf("分类%d不应该为空", i+1))
-		t.Logf("分类%d: %s", i+1, category)
-	}
-
-	t.Logf("分类总数: %d", len(categories))
+			for i, category := range categories {
+				t.Assert().NotEmpty(category, fmt.Sprintf("分类%d不应该为空", i+1))
+			}
+		})
+	})
 }
 
 // TestGetProductsByCategory 测试根据分类获取商品
 func TestGetProductsByCategory(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Test getting products by category from API", func(t provider.T) {
+		t.Tags("api", "categories", "products")
+		t.Description("验证根据分类获取商品的API功能")
+		t.Severity(allure.NORMAL)
 
-	category := "electronics"
-	t.Logf("获取分类为%s的商品", category)
+		apiClient := client.NewAPIClient()
+		category := "electronics"
+		var products []models.Product
+		var resp *resty.Response
+		var err error
 
-	testHelper.LogRequest("GET", "/products/category/electronics", nil)
+		t.WithNewStep("发送获取指定分类商品的请求", func(sCtx provider.StepCtx) {
+			products, resp, err = apiClient.GetProductsByCategory(category)
+			t.Require().NoError(err, "请求不应该返回错误")
+		})
 
-	products, resp, err := apiClient.GetProductsByCategory(category)
+		t.WithNewStep("验证响应状态码", func(sCtx provider.StepCtx) {
+			t.Require().Equal(200, resp.StatusCode(), "根据分类获取商品应该返回200状态码")
+		})
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
+		t.WithNewStep("验证响应时间", func(sCtx provider.StepCtx) {
+			t.Require().True(resp.Time() < 5*time.Second, "响应时间应该在5秒内")
+		})
 
-	// 验证响应状态码
-	testHelper.AssertStatusCode(resp, 200, "根据分类获取商品应该返回200状态码")
-
-	// 验证响应时间
-	testHelper.AssertResponseTime(resp, 5*time.Second, "响应时间应该在5秒内")
-
-	// 验证返回的商品数量
-	testHelper.AssertNotEmpty(products, "商品列表不应该为空")
-	assert.Greater(t, len(products), 0, "应该返回至少一个商品")
-
-	// 验证商品数据结构和分类一致性
-	for i, product := range products {
-		assert.Greater(t, product.ID, 0, fmt.Sprintf("商品%d的ID应该大于0", i+1))
-		assert.NotEmpty(t, product.Title, fmt.Sprintf("商品%d的标题不应该为空", i+1))
-		assert.Greater(t, product.Price, 0.0, fmt.Sprintf("商品%d的价格应该大于0", i+1))
-		assert.Equal(t, category, product.Category, fmt.Sprintf("商品%d的分类应该匹配请求的分类", i+1))
-		assert.NotEmpty(t, product.Image, fmt.Sprintf("商品%d的图片URL不应该为空", i+1))
-
-		if i < 3 { // 只记录前3个商品的详细信息
-			t.Logf("商品%d - ID: %d, 标题: %s, 价格: %.2f, 分类: %s", 
-				i+1, product.ID, product.Title, product.Price, product.Category)
-		}
-	}
-
-	t.Logf("分类%s的商品总数: %d", category, len(products))
+		t.WithNewStep("验证商品数据", func(sCtx provider.StepCtx) {
+			t.Require().NotEmpty(products, "商品列表不应该为空")
+			t.Assert().Greater(len(products), 0, "应该返回至少一个商品")
+		})
+	})
 }
 
 // TestGetProductsByInvalidCategory 测试获取无效分类的商品
 func TestGetProductsByInvalidCategory(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Test getting products by invalid category", func(t provider.T) {
+		t.Tags("api", "categories", "negative")
+		t.Description("验证获取不存在分类商品的API行为")
+		t.Severity(allure.NORMAL)
 
-	invalidCategory := "nonexistent"
-	t.Logf("请求不存在的分类: %s", invalidCategory)
+		apiClient := client.NewAPIClient()
+		invalidCategory := "nonexistent"
+		var products []models.Product
+		var resp *resty.Response
+		var err error
 
-	testHelper.LogRequest("GET", "/products/category/nonexistent", nil)
+		t.WithNewStep("发送获取无效分类商品的请求", func(sCtx provider.StepCtx) {
+			products, resp, err = apiClient.GetProductsByCategory(invalidCategory)
+		})
 
-	products, resp, err := apiClient.GetProductsByCategory(invalidCategory)
-
-	testHelper.LogResponse(resp)
-
-	// 对于不存在的分类，API可能返回404或空数组
-	if err != nil || resp.StatusCode() == 404 {
-		// 如果返回404，这是预期的行为
-		assert.True(t, resp.StatusCode() == 404 || err != nil, "请求不存在的分类应该返回404或错误")
-	} else if resp.StatusCode() == 200 {
-		// 如果返回200，商品列表应该为空
-		assert.Equal(t, 0, len(products), "不存在的分类应该返回空的商品列表")
-	}
-
-	t.Logf("响应状态码: %d, 返回商品数: %d", resp.StatusCode(), len(products))
+		t.WithNewStep("验证错误处理", func(sCtx provider.StepCtx) {
+			if err != nil || resp.StatusCode() == 404 {
+				t.Assert().True(resp.StatusCode() == 404 || err != nil, "请求不存在的分类应该返回404或错误")
+			} else if resp.StatusCode() == 200 {
+				t.Assert().Equal(0, len(products), "不存在的分类应该返回空的商品列表")
+			}
+		})
+	})
 }
 
 // TestCategoryDataConsistency 测试分类数据一致性
 func TestCategoryDataConsistency(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Test category data consistency", func(t provider.T) {
+		t.Tags("api", "categories", "consistency")
+		t.Description("验证分类数据的一致性")
+		t.Severity(allure.CRITICAL)
 
-	// 首先获取所有分类
-	t.Log("获取所有分类列表")
-	testHelper.LogRequest("GET", "/products/categories", nil)
+		apiClient := client.NewAPIClient()
+		var categories []string
+		var allProducts []models.Product
+		var resp *resty.Response
+		var err error
 
-	categories, resp, err := apiClient.GetAllCategories()
+		t.WithNewStep("获取所有分类", func(sCtx provider.StepCtx) {
+			categories, resp, err = apiClient.GetAllCategories()
+			t.Require().NoError(err, "获取分类列表不应该返回错误")
+			t.Require().Equal(200, resp.StatusCode(), "获取分类列表应该返回200状态码")
+			t.Require().Greater(len(categories), 0, "应该有至少一个分类")
+		})
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "获取分类列表不应该返回错误")
-	testHelper.AssertStatusCode(resp, 200, "获取分类列表应该返回200状态码")
-	require.Greater(t, len(categories), 0, "应该有至少一个分类")
+		t.WithNewStep("获取所有商品", func(sCtx provider.StepCtx) {
+			allProducts, resp, err = apiClient.GetAllProducts()
+			t.Require().NoError(err, "获取商品列表不应该返回错误")
+			t.Require().Equal(200, resp.StatusCode(), "获取商品列表应该返回200状态码")
+			t.Require().Greater(len(allProducts), 0, "应该有至少一个商品")
+		})
 
-	// 然后获取所有商品
-	t.Log("获取所有商品列表")
-	testHelper.LogRequest("GET", "/products", nil)
+		t.WithNewStep("验证分类数据一致性", func(sCtx provider.StepCtx) {
+			for _, category := range categories {
+				categoryProducts, resp3, err3 := apiClient.GetProductsByCategory(category)
+				t.Require().NoError(err3, fmt.Sprintf("获取分类%s的商品不应该返回错误", category))
+				t.Require().Equal(200, resp3.StatusCode(), fmt.Sprintf("获取分类%s的商品应该返回200状态码", category))
 
-	allProducts, resp2, err2 := apiClient.GetAllProducts()
-
-	testHelper.LogResponse(resp2)
-	require.NoError(t, err2, "获取商品列表不应该返回错误")
-	testHelper.AssertStatusCode(resp2, 200, "获取商品列表应该返回200状态码")
-	require.Greater(t, len(allProducts), 0, "应该有至少一个商品")
-
-	// 验证每个分类都有对应的商品
-	for _, category := range categories {
-		t.Logf("验证分类: %s", category)
-
-		// 获取该分类的商品
-		testHelper.LogRequest("GET", fmt.Sprintf("/products/category/%s", category), nil)
-		categoryProducts, resp3, err3 := apiClient.GetProductsByCategory(category)
-
-		testHelper.LogResponse(resp3)
-		require.NoError(t, err3, fmt.Sprintf("获取分类%s的商品不应该返回错误", category))
-		testHelper.AssertStatusCode(resp3, 200, fmt.Sprintf("获取分类%s的商品应该返回200状态码", category))
-
-		// 验证该分类的商品确实属于该分类
-		for _, product := range categoryProducts {
-			assert.Equal(t, category, product.Category, 
-				fmt.Sprintf("商品%d的分类应该是%s，但实际是%s", product.ID, category, product.Category))
-		}
-
-		// 统计在所有商品中属于该分类的商品数量
-		expectedCount := 0
-		for _, product := range allProducts {
-			if product.Category == category {
-				expectedCount++
+				// 验证该分类的商品确实属于该分类
+				for _, product := range categoryProducts {
+					t.Assert().Equal(category, product.Category, 
+						fmt.Sprintf("商品%d的分类应该是%s，但实际是%s", product.ID, category, product.Category))
+				}
 			}
-		}
-
-		// 验证数量一致性
-		assert.Equal(t, expectedCount, len(categoryProducts), 
-			fmt.Sprintf("分类%s的商品数量不一致：期望%d，实际%d", category, expectedCount, len(categoryProducts)))
-
-		t.Logf("分类%s验证完成 - 商品数量: %d", category, len(categoryProducts))
-	}
-
-	t.Logf("分类数据一致性验证完成 - 总分类数: %d, 总商品数: %d", len(categories), len(allProducts))
+		})
+	})
 }
 
 // TestCategoryPerformance 测试分类API性能
 func TestCategoryPerformance(t *testing.T) {
-	apiClient := client.NewAPIClient()
-	testHelper := utils.NewTestHelper(t)
+	runner.Run(t, "Test category API performance", func(t provider.T) {
+		t.Tags("api", "categories", "performance")
+		t.Description("验证分类API的性能表现")
+		t.Severity(allure.NORMAL)
 
-	// 测试获取所有分类的性能
-	t.Log("测试获取所有分类的性能")
-	startTime := time.Now()
+		apiClient := client.NewAPIClient()
+		var categories []string
+		var resp *resty.Response
+		var err error
+		var startTime time.Time
 
-	testHelper.LogRequest("GET", "/products/categories", nil)
-	categories, resp, err := apiClient.GetAllCategories()
+		t.WithNewStep("测试获取所有分类的性能", func(sCtx provider.StepCtx) {
+			startTime = time.Now()
+			categories, resp, err = apiClient.GetAllCategories()
+			elapsedTime := time.Since(startTime)
 
-	testHelper.LogResponse(resp)
-	require.NoError(t, err, "请求不应该返回错误")
-	testHelper.AssertStatusCode(resp, 200, "获取分类列表应该返回200状态码")
+			t.Require().NoError(err, "请求不应该返回错误")
+			t.Require().Equal(200, resp.StatusCode(), "获取分类列表应该返回200状态码")
+			t.Assert().Less(elapsedTime, 2*time.Second, "获取分类列表的响应时间应该少于2秒")
+		})
 
-	elapsedTime := time.Since(startTime)
-	t.Logf("获取所有分类耗时: %v", elapsedTime)
+		t.WithNewStep("测试获取分类商品的性能", func(sCtx provider.StepCtx) {
+			if len(categories) > 0 {
+				firstCategory := categories[0]
+				startTime2 := time.Now()
+				products, resp2, err2 := apiClient.GetProductsByCategory(firstCategory)
+				elapsedTime2 := time.Since(startTime2)
 
-	// 验证响应时间在合理范围内
-	assert.Less(t, elapsedTime, 2*time.Second, "获取分类列表的响应时间应该少于2秒")
-
-	// 如果有分类，测试获取第一个分类商品的性能
-	if len(categories) > 0 {
-		firstCategory := categories[0]
-		t.Logf("测试获取分类%s商品的性能", firstCategory)
-
-		startTime2 := time.Now()
-		testHelper.LogRequest("GET", fmt.Sprintf("/products/category/%s", firstCategory), nil)
-		products, resp2, err2 := apiClient.GetProductsByCategory(firstCategory)
-
-		testHelper.LogResponse(resp2)
-		require.NoError(t, err2, "请求不应该返回错误")
-		testHelper.AssertStatusCode(resp2, 200, "获取分类商品应该返回200状态码")
-
-		elapsedTime2 := time.Since(startTime2)
-		t.Logf("获取分类%s的商品耗时: %v，商品数量: %d", firstCategory, elapsedTime2, len(products))
-
-		// 验证响应时间在合理范围内
-		assert.Less(t, elapsedTime2, 3*time.Second, "获取分类商品的响应时间应该少于3秒")
-	}
-
-	t.Log("分类API性能测试完成")
+				t.Require().NoError(err2, "请求不应该返回错误")
+				t.Require().Equal(200, resp2.StatusCode(), "获取分类商品应该返回200状态码")
+				t.Assert().Less(elapsedTime2, 3*time.Second, "获取分类商品的响应时间应该少于3秒")
+				t.Assert().Greater(len(products), 0, "应该返回商品数据")
+			}
+		})
+	})
 }

@@ -50,10 +50,34 @@ test-carts: clean
 	@echo "正在运行购物车相关测试..."
 	go test -v ./tests/ -run "Test.*Cart" -timeout 15m
 
+# 生成Allure报告
+report:
+	@echo "生成Allure报告..."
+	allure generate tests/allure-results --clean -o allure-report
+	@echo "Allure报告已生成到 allure-report 目录"
+
+# 启动Allure服务器
+serve:
+	@echo "启动Allure服务器..."
+	allure serve tests/allure-results
+
+# 安装Allure命令行工具
+install:
+	@echo "安装Allure命令行工具..."
+	npm install -g allure-commandline
+	@echo "Allure已安装完成"
+
+# 运行测试并生成报告
+test-and-report: test report
+	@echo "测试完成并已生成报告"
+
+# 完整流程：测试 -> 报告 -> 服务
+full: test report serve
+
 # 清理测试结果
 clean:
 	@echo "正在清理测试结果..."
-	rm -rf test-results
+	rm -rf tests/allure-results allure-report
 
 # 检查环境
 check:

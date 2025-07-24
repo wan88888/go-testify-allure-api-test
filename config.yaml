@@ -3,6 +3,10 @@ api:
   timeout: 30
   retry_count: 3
 
+allure:
+  results_dir: "allure-results"
+  report_dir: "allure-report"
+
 test:
   parallel: true
   verbose: true
